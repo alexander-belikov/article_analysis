@@ -134,15 +134,19 @@ def eat_page_prefix_suffix(article, prefix=True, window=150, verbose=False):
 
     dir = 1 if prefix else -1
     article_out = [None] * len(article)
+
     last_page_a, last_page_b = article[-1], article[-2]
+    window_a = min([len(last_page_a), window])
+    window_b = min([len(last_page_b), window])
 
     if prefix:
-        page_a_buff, page_b_buff = last_page_a[:window], last_page_b[:window]
+        page_a_buff, page_b_buff = last_page_a[:window_a], last_page_b[:window_b]
     else:
-        page_a_buff, page_b_buff = last_page_a[-window:], last_page_b[-window:]
+        page_a_buff, page_b_buff = last_page_a[-window_a:], last_page_b[-window_b:]
 
     last_page_a_split, last_page_b_split = page_a_buff.split()[::dir], page_b_buff.split()[::dir]
     if verbose:
+        print('window {0}'.format(window))
         print('len last_page_a_split {0} len last_page_b_split {1}'.format(len(last_page_a_split),
                                                                            len(last_page_b_split)))
 
@@ -176,27 +180,28 @@ def eat_page_prefix_suffix(article, prefix=True, window=150, verbose=False):
     ixs = list(range(len(article)))[::-1]
     for ix in ixs:
         page = article[ix]
+        window_ = min([window, len(page)])
         if prefix:
-            page_buff = page[:window]
+            page_buff = page[:window_]
         else:
-            page_buff = page[-window:]
+            page_buff = page[-window_:]
 
         page_split = page_buff.split()[::dir]
 
         ind_a = sum(len(x) for x in page_split[:n_matches]) + n_matches
 
         if is_int(word_not_number) or any([w == word_not_number for w in page_split]):
+            if verbose:
+                print('{0} {1}'.format(ind_a, len(page)))
             if prefix:
                 article_out[ix] = page[ind_a:]
-                if verbose:
-                    print(page[:ind_a])
             else:
-                article_out[ix] = page[:-ind_a]
-                if verbose:
-                    print(page[-ind_a:])
-
+                if ind_a > 0:
+                    article_out[ix] = page[:-ind_a]
+                else:
+                    article_out[ix] = page
         else:
-            article_out[ix] = page
+            article_out[ix] = article[ix]
     return article_out
 
 
@@ -208,25 +213,32 @@ def merge_page_breaks(article, window=150, verbose=False):
 
     for p2 in article[1:]:
         p1 = article_out.pop()
-        ws1, ws2 = p1[-window:].split()[-1], p2[:window].split()[0]
-        w0 = ws1+ws2
-        check_flag = d.check(w0)
-        if d.suggest(w0):
-            suggest_word = d.suggest(w0)[0]
-        else:
-            suggest_word = ''
-        if len(suggest_word) == len(w0) and sum([c1 != c2 for c1, c2 in zip(suggest_word, w0)]):
-            suggest_flag = True
-        else:
-            suggest_flag = False
-        if check_flag or suggest_flag:
-            if suggest_flag:
-                p1_work = p1[:-len(ws1)] + suggest_word
+        window1 = min([window, len(p1)])
+        window2 = min([window, len(p2)])
+        subphrase1, subphrase2 = p1[-window1:].split(), p2[:window2].split()
+        if subphrase1 and subphrase2:
+            ws1, ws2 = subphrase1[-1], subphrase2[0]
+            w0 = ws1+ws2
+            check_flag = d.check(w0)
+            if d.suggest(w0):
+                suggest_word = d.suggest(w0)[0]
             else:
-                p1_work = p1[:-len(ws1)] + w0
-            article_out.append(p1_work)
-            p2_work = p2[len(ws2):]
-            article_out.append(p2_work)
+                suggest_word = ''
+            if len(suggest_word) == len(w0) and sum([c1 != c2 for c1, c2 in zip(suggest_word, w0)]):
+                suggest_flag = True
+            else:
+                suggest_flag = False
+            if check_flag or suggest_flag:
+                if suggest_flag:
+                    p1_work = p1[:-len(ws1)] + suggest_word
+                else:
+                    p1_work = p1[:-len(ws1)] + w0
+                article_out.append(p1_work)
+                p2_work = p2[len(ws2):]
+                article_out.append(p2_work)
+            else:
+                article_out.append(p1)
+                article_out.append(p2)
         else:
             article_out.append(p1)
             article_out.append(p2)
@@ -265,6 +277,7 @@ def merge_hyphens(phrase, checker_dict=None):
 
 
 def merge_hyphenated_words(super_phrase, checker_dict=None):
+    #TODO simpligy if else logic
     if not checker_dict:
         checker_dict = enchant.Dict("en_US")
 
@@ -274,10 +287,13 @@ def merge_hyphenated_words(super_phrase, checker_dict=None):
     while super_phrase_copy:
         w1 = super_phrase_copy.pop(0)
         if w1 == '-':
-            w2 = super_phrase_copy.pop(0)
-            if checker_dict.check(super_phrase_hyphed[-1] + w2) and w2.isalpha():
-                w0 = super_phrase_hyphed.pop()
-                super_phrase_hyphed.append(w0 + w2)
+            if super_phrase_copy:
+                w2 = super_phrase_copy.pop(0)
+                if checker_dict.check(super_phrase_hyphed[-1] + w2) and w2.isalpha():
+                    w0 = super_phrase_hyphed.pop()
+                    super_phrase_hyphed.append(w0 + w2)
+                else:
+                    super_phrase_hyphed.append(w1)
             else:
                 super_phrase_hyphed.append(w1)
         else:
@@ -302,19 +318,31 @@ def eat_stopwords(phrase, stop_tokens):
     return [w for w in phrase if w not in stop_tokens]
 
 
-def transform_article(article, eat_numbers=True, lower_case=True):
+def transform_article(article, eat_numbers=True, lower_case=True, verbose=False):
 
+    if verbose:
+        print('number of pages: {0}'.format(len(article)))
     odd_pages, even_pages = split_odds_evens(article)
+
     # eat prefix/suffix of odd pages
-    odds2 = eat_page_prefix_suffix(odd_pages, True)
-    odds3 = eat_page_prefix_suffix(odds2, False)
+    if len(odd_pages) > 1:
+        odds2 = eat_page_prefix_suffix(odd_pages, prefix=True, verbose=verbose)
+        odds3 = eat_page_prefix_suffix(odds2, prefix=False, verbose=verbose)
+    else:
+        odds3 = odd_pages
 
     # eat prefix/suffix of even pages
-    evens2 = eat_page_prefix_suffix(even_pages, True)
-    evens3 = eat_page_prefix_suffix(evens2, False)
+    if len(even_pages) > 1:
+        evens2 = eat_page_prefix_suffix(even_pages, prefix=True, verbose=verbose)
+        evens3 = eat_page_prefix_suffix(evens2, prefix=False, verbose=verbose)
+    else:
+        evens3 = even_pages
 
     # join odd and even pages
     article2 = join_odds_evens(odds3, evens3)
+
+    if verbose:
+        print('page lens are {0}'.format([len(x) for x in article2]))
 
     # merge page breaks
     article3 = merge_page_breaks(article2, verbose=True)
