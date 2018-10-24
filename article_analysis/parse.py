@@ -1,5 +1,9 @@
 import enchant
 import numpy as np
+import re
+from nltk.corpus import stopwords
+from nltk import ngrams
+from collections import Counter
 
 
 def is_int(x):
@@ -258,3 +262,91 @@ def merge_hyphens(phrase, checker_dict=None):
         return new_phrase
     else:
         return phrase
+
+
+def merge_hyphenated_words(super_phrase, checker_dict=None):
+    if not checker_dict:
+        checker_dict = enchant.Dict("en_US")
+
+    super_phrase_hyphed = super_phrase[:1]
+    super_phrase_copy = list(super_phrase[1:])
+
+    while super_phrase_copy:
+        w1 = super_phrase_copy.pop(0)
+        if w1 == '-':
+            w2 = super_phrase_copy.pop(0)
+            if checker_dict.check(super_phrase_hyphed[-1] + w2) and w2.isalpha():
+                w0 = super_phrase_hyphed.pop()
+                super_phrase_hyphed.append(w0 + w2)
+            else:
+                super_phrase_hyphed.append(w1)
+        else:
+            super_phrase_hyphed.append(w1)
+    return super_phrase_hyphed
+
+
+def split_into_phrases(tokens_list):
+    phrases = []
+    cur_phrase = []
+    for token1, token2 in zip(tokens_list[:-1], tokens_list[1:]):
+        cur_phrase.append(token1)
+        if token1 == '.' and token2[0].isupper():
+            phrases.append(cur_phrase)
+            cur_phrase = []
+    cur_phrase.append(tokens_list[-1])
+    phrases.append(cur_phrase)
+    return phrases
+
+
+def eat_stopwords(phrase, stop_tokens):
+    return [w for w in phrase if w not in stop_tokens]
+
+
+def transform_article(article, eat_numbers=True, lower_case=True):
+
+    odd_pages, even_pages = split_odds_evens(article)
+    # eat prefix/suffix of odd pages
+    odds2 = eat_page_prefix_suffix(odd_pages, True)
+    odds3 = eat_page_prefix_suffix(odds2, False)
+
+    # eat prefix/suffix of even pages
+    evens2 = eat_page_prefix_suffix(even_pages, True)
+    evens3 = eat_page_prefix_suffix(evens2, False)
+
+    # join odd and even pages
+    article2 = join_odds_evens(odds3, evens3)
+
+    # merge page breaks
+    article3 = merge_page_breaks(article2, verbose=True)
+
+    # aggregate pages into a string
+    sagg = ''
+    for s in article3:
+        sagg += s
+
+    # split only if a white space follows and the previous letter is capital
+    tokenized_agg = re.findall(r"[\w']+|[.,!?;:-]", sagg)
+    super_phrase_hyphed = merge_hyphenated_words(tokenized_agg)
+    phrases = split_into_phrases(super_phrase_hyphed)
+
+    if lower_case:
+        phrases = [[w.lower() for w in phrase] for phrase in phrases]
+
+    swords = set(stopwords.words('english')) | set(list('.,!?;:-'))
+
+    phrases_clean = [eat_stopwords(phrase, swords) for phrase in phrases]
+    if eat_numbers:
+        phrases_clean = [[w for w in phrase if not w.isdigit()] for phrase in phrases_clean]
+    phrases_clean2 = [phrase for phrase in phrases_clean if phrase]
+    return phrases_clean2
+
+
+def compute_ngrams(article, highest_order=5):
+    # aggregate ngrams for an article
+    ngrams_dict = {k: Counter() for k in range(2, highest_order+1)}
+    for order in range(2, highest_order+1):
+        cnt = Counter()
+        for phrase in article:
+            cnt += Counter(ngrams(phrase, order))
+        ngrams_dict[order] += cnt
+    return ngrams_dict
