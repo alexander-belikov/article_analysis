@@ -126,9 +126,9 @@ def eat_page_prefix_suffix(article, prefix=True, window=150, verbose=False):
     ocr specific parsing: article is scanned page by page,
     pages can be odd or even. Even and odd pages have different prefixes.
     :param article: list of pages (page is a string)
-    :param window:
     :parama prefix: True for prefix, False for suffix
-    :parama verbose: verbosity
+    :param window:
+    :param verbose: verbosity
     :return: cleaned article
     """
 
@@ -145,24 +145,32 @@ def eat_page_prefix_suffix(article, prefix=True, window=150, verbose=False):
         page_a_buff, page_b_buff = last_page_a[-window_a:], last_page_b[-window_b:]
 
     last_page_a_split, last_page_b_split = page_a_buff.split()[::dir], page_b_buff.split()[::dir]
-    if verbose:
-        print('window {0}'.format(window))
-        print('len last_page_a_split {0} len last_page_b_split {1}'.format(len(last_page_a_split),
-                                                                           len(last_page_b_split)))
 
-    flags_eq = [True if a == b else False
-                for a, b in zip(last_page_a_split, last_page_b_split)]
-    flags_int = [True if (is_int(a) and is_int(b) and int(a) - int(b) == 2) else False
-                 for a, b in zip(last_page_a_split, last_page_b_split)]
+    if len(last_page_a_split) > 0 and len(last_page_b_split) > 0:
 
-    flags = np.array(flags_eq) | np.array(flags_int)
+        if verbose:
+            print('window {0}'.format(window))
+            print('len last_page_a_split {0} len last_page_b_split {1}'.format(len(last_page_a_split),
+                                                                               len(last_page_b_split)))
 
+        flags_eq = [True if a == b else False
+                    for a, b in zip(last_page_a_split, last_page_b_split)]
+        flags_int = [True if (is_int(a) and is_int(b) and int(a) - int(b) == 2) else False
+                     for a, b in zip(last_page_a_split, last_page_b_split)]
+
+        if verbose:
+            print('len flag_eq : {0}, len flag_int {1}'.format(len(flags_eq), len(flags_int)))
+        flags = np.array(flags_eq) | np.array(flags_int)
+    else:
+        flags = np.array()
     n_matches = 0
-    while n_matches < len(flags) and flags[n_matches]:
-        n_matches += 1
+
+    if flags.size != 0:
+        while n_matches < len(flags) and flags[n_matches]:
+            n_matches += 1
 
     is_number = [is_int(w) for w in last_page_a_split[:n_matches]]
-    if not all(is_number):
+    if is_number and not all(is_number):
         n_word = 0
         while n_word < len(is_number) and is_number[n_word]:
             n_word += 1
@@ -322,6 +330,8 @@ def transform_article(article, eat_numbers=True, lower_case=True, verbose=False)
 
     if verbose:
         print('number of pages: {0}'.format(len(article)))
+
+    article = [page for page in article if len(page) > 5]
     odd_pages, even_pages = split_odds_evens(article)
 
     # eat prefix/suffix of odd pages
