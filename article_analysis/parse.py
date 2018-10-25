@@ -162,7 +162,7 @@ def eat_page_prefix_suffix(article, prefix=True, window=150, verbose=False):
             print('len flag_eq : {0}, len flag_int {1}'.format(len(flags_eq), len(flags_int)))
         flags = np.array(flags_eq) | np.array(flags_int)
     else:
-        flags = np.array()
+        flags = np.array([])
     n_matches = 0
 
     if flags.size != 0:
