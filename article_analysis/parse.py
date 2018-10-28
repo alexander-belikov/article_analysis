@@ -3,7 +3,12 @@ import numpy as np
 import re
 from nltk.corpus import stopwords
 from nltk import ngrams
+from nltk.stem.wordnet import WordNetLemmatizer
 from collections import Counter
+from os.path import expanduser, join, isfile
+from os import listdir
+import gzip
+import pickle
 
 
 def is_int(x):
@@ -388,3 +393,71 @@ def compute_ngrams(article, highest_order=5):
             cnt += Counter(ngrams(phrase, order))
         ngrams_dict[order] += cnt
     return ngrams_dict
+
+
+def get_present_keys(fpath, prefix, suffix):
+    suffix_len = len(suffix)
+    prefix_len = len(prefix)
+    files = [f for f in listdir(fpath) if isfile(join(fpath, f)) and
+             (f[-suffix_len:] == suffix and f[:prefix_len] == prefix)]
+    ints = [int(f.split('_')[-1].split('.')[0]) for f in files]
+    if ints:
+        max_index = max(ints)
+    else:
+        max_index = 0
+    present_keys = set()
+    for f in files:
+        with gzip.open(join(fpath, f)) as fp:
+            item = pickle.load(fp)
+            present_keys |= set(list(item.keys()))
+    return present_keys, max_index
+
+
+def split_corpus(corpus, chunk_size=200):
+    corpus_keys = list(corpus.keys())
+    keys_chunks = [corpus_keys[k:k+chunk_size] for k in range(0, len(corpus_keys), chunk_size)]
+    corpus_chunks = [{k: corpus[k] for k in chunk} for chunk in keys_chunks]
+    return corpus_chunks
+
+
+def transform_counter(cnt, how='lemma', lmtzr=None):
+    if how == 'lemma':
+        if not lmtzr:
+            lmtzr = WordNetLemmatizer()
+        cnt_new = Counter()
+        for item, cnt in cnt.items():
+            k = tuple([lmtzr.lemmatize(x) for x in item])
+            cnt_new += Counter({k: cnt})
+        return cnt_new
+    else:
+        return cnt
+
+
+def transform_chunk(chunk, lmtzr=None):
+    if not lmtzr:
+        lmtzr = WordNetLemmatizer()
+    new_chunk = {}
+    keys = sorted(chunk.keys())
+    for k in keys[:]:
+        orders = sorted(chunk[k].keys())
+        new_chunk[k] = {}
+        for j in orders[:]:
+            new_chunk[k][j] = transform_counter(chunk[k][j], how='lemma', lmtzr=lmtzr)
+    return new_chunk
+
+
+def get_indices(fpath, prefix, suffix):
+    suffix_len = len(suffix)
+    prefix_len = len(prefix)
+    files = [f for f in listdir(fpath) if isfile(join(fpath, f)) and
+             (f[-suffix_len:] == suffix and f[:prefix_len] == prefix)]
+    ints = [int(f.split('_')[-1].split('.')[0]) for f in files]
+    return sorted(ints)
+
+
+def get_chunk(fpath, prefix, index):
+    fname = join(fpath, '{0}_{1}.pgz'.format(prefix, index))
+    with gzip.open(fname) as fp:
+        item = pickle.load(fp)
+        return item
+    return None
