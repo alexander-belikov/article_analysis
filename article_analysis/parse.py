@@ -384,10 +384,21 @@ def transform_article(article, eat_numbers=True, lower_case=True, verbose=False)
     return phrases_clean2
 
 
-def compute_ngrams(article, highest_order=5):
+def compute_ngrams_positions(article, lowest_order=1, highest_order=5):
     # aggregate ngrams for an article
-    ngrams_dict = {k: Counter() for k in range(2, highest_order+1)}
-    for order in range(2, highest_order+1):
+    ngrams_dict = {k: Counter() for k in range(lowest_order, highest_order+1)}
+    for order in range(lowest_order, highest_order+1):
+        cnt = Counter()
+        for phrase in article:
+            cnt += Counter(ngrams(phrase, order))
+        ngrams_dict[order] += cnt
+    return ngrams_dict
+
+
+def compute_ngrams(article, lowest_order=1, highest_order=5):
+    # aggregate ngrams for an article
+    ngrams_dict = {k: Counter() for k in range(lowest_order, highest_order+1)}
+    for order in range(lowest_order, highest_order+1):
         cnt = Counter()
         for phrase in article:
             cnt += Counter(ngrams(phrase, order))
