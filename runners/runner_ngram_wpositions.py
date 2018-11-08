@@ -9,10 +9,11 @@ from nltk.stem.wordnet import WordNetLemmatizer
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
-def run(input_path, output_path, head, chunksize):
+def run(input_path, output_path, head, chunksize, save=True):
     cnt_type = 'list_agg'
 
-    fname_input = expanduser(join(input_path, 'json_amj.txt'))
+    fname_input = expanduser(input_path)
+    print('Reading file... {0}'.format(fname_input))
     df = pd.read_json(fname_input, lines=True)
 
     corpus = dict(zip(df['doi'], [x['ocr'] for x in df['data']]))
@@ -33,6 +34,8 @@ def run(input_path, output_path, head, chunksize):
 
     lmtzr = WordNetLemmatizer()
 
+    article_dict = {}
+
     if head > 0:
         corpus_split = corpus_split[:head]
 
@@ -40,23 +43,28 @@ def run(input_path, output_path, head, chunksize):
         corpus_ngrams = {}
         for doi, article in chunk.items():
             print('{0} '.format(doi), end='')
-            article_phrases = aap.transform_article(article)
+            article_phrases_ = aap.transform_article(article)
+            article_dict[doi] = article_phrases_
+            article_phrases = aap.lower_rm_stopwords_digits(article_phrases_)
             print('{1} '.format(doi, len(article_phrases)), end='')
             ngram_dict = aap.compute_ngrams(article_phrases, counter_type=cnt_type)
             orders = sorted(ngram_dict.keys())
             for o in orders:
                 ngram_dict[o] = aap.transform_counter(ngram_dict[o], 'lemma', lmtzr, counter_type=cnt_type)
             corpus_ngrams[doi] = ngram_dict
-        with gzip.open(join(destpath, 'ngrams_corpus_{0}.pgz'.format(j + 1 + max_index )), 'wb') as fp:
-            pickle.dump(corpus_ngrams, fp)
-        print('\n{0} chunks, {1:.2f} % complete'.format(j, 100*j/len(corpus_split)))
+        if save:
+            with gzip.open(join(destpath, 'ngrams_corpus_{0}.pgz'.format(j + max_index)), 'wb') as fp:
+                pickle.dump(corpus_ngrams, fp)
+        print('\n{0} chunks, {1:.2f} % complete'.format(j, 100*(j+1)/len(corpus_split)))
+    if save:
+        with gzip.open(join(destpath, 'corpus_clean_dict.pgz'), 'wb') as fp:
+            pickle.dump(article_dict, fp)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    args = parser.parse_args()
 
-    parser.add_argument('-h', '--head',
+    parser.add_argument('--head',
                         default=-1, type=int,
                         help='size of data batches')
 
@@ -65,15 +73,16 @@ if __name__ == "__main__":
                         help='path to data file')
 
     parser.add_argument('-d', '--destpath',
-                        default='~/data/jstor/ngrams_new2',
-                        help='folder to write data to')
-
-    parser.add_argument('-d', '--destpath',
-                        default='~/data/jstor/ngrams_new2',
+                        default='~/data/jstor/ngrams_new',
                         help='folder to write data to')
 
     parser.add_argument('-c', '--chunksize',
                         default='200', type=int,
                         help='chunk size of output (output list size)')
 
-    run(args.sourcepath, args.destpath, args.head)
+    parser.add_argument('--save',
+                        default=True, type=bool,
+                        help='save results')
+
+    args = parser.parse_args()
+    run(args.sourcepath, args.destpath, args.head, args.chunksize, args.save)

@@ -7,8 +7,10 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from collections import Counter
 from os.path import expanduser, join, isfile
 from os import listdir
+from .list_agg import ListAggregator
 import gzip
 import pickle
+from copy import deepcopy
 
 
 def is_int(x):
@@ -331,7 +333,7 @@ def eat_stopwords(phrase, stop_tokens):
     return [w for w in phrase if w not in stop_tokens]
 
 
-def transform_article(article, eat_numbers=True, lower_case=True, verbose=False):
+def transform_article(article, verbose=False):
 
     if verbose:
         print('number of pages: {0}'.format(len(article)))
@@ -371,17 +373,22 @@ def transform_article(article, eat_numbers=True, lower_case=True, verbose=False)
     tokenized_agg = re.findall(r"[\w']+|[.,!?;:-]", sagg)
     super_phrase_hyphed = merge_hyphenated_words(tokenized_agg)
     phrases = split_into_phrases(super_phrase_hyphed)
+    return phrases
 
+
+def lower_rm_stopwords_digits(phrases, eat_numbers=True, lower_case=True, rm_stopwords=True):
+    phrases = deepcopy(phrases)
     if lower_case:
         phrases = [[w.lower() for w in phrase] for phrase in phrases]
 
     swords = set(stopwords.words('english')) | set(list('.,!?;:-'))
 
-    phrases_clean = [eat_stopwords(phrase, swords) for phrase in phrases]
+    if rm_stopwords:
+        phrases = [eat_stopwords(phrase, swords) for phrase in phrases]
     if eat_numbers:
-        phrases_clean = [[w for w in phrase if not w.isdigit()] for phrase in phrases_clean]
-    phrases_clean2 = [phrase for phrase in phrases_clean if phrase]
-    return phrases_clean2
+        phrases = [[w for w in phrase if not w.isdigit()] for phrase in phrases]
+    phrases = [phrase for phrase in phrases if phrase]
+    return phrases
 
 
 def compute_ngrams_positions(article, lowest_order=1, highest_order=5):
@@ -394,14 +401,42 @@ def compute_ngrams_positions(article, lowest_order=1, highest_order=5):
         ngrams_dict[order] += cnt
     return ngrams_dict
 
+# def compute_ngrams(article, lowest_order=1, highest_order=5):
+#     # aggregate ngrams for an article
+#     ngrams_dict = {k: Counter() for k in range(lowest_order, highest_order+1)}
+#     for order in range(lowest_order, highest_order+1):
+#         cnt = Counter()
+#         for phrase in article:
+#             if order > 1:
+#                 cnt += Counter(ngrams(phrase, order))
+#             else:
+#                 cnt += Counter((x[0] for x in ngrams(phrase, order)))
+#         ngrams_dict[order] += cnt
+#     return ngrams_dict
 
-def compute_ngrams(article, lowest_order=1, highest_order=5):
+
+def compute_ngrams(article, lowest_order=1, highest_order=5, counter_type='counter'):
     # aggregate ngrams for an article
-    ngrams_dict = {k: Counter() for k in range(lowest_order, highest_order+1)}
+    if counter_type == 'list_agg':
+        cnt_class = ListAggregator
+    else:
+        cnt_class = Counter
+    ngrams_dict = {k: cnt_class() for k in range(lowest_order, highest_order+1)}
     for order in range(lowest_order, highest_order+1):
-        cnt = Counter()
-        for phrase in article:
-            cnt += Counter(ngrams(phrase, order))
+        cnt = cnt_class()
+        for phrase, ii in zip(article, range(len(article))):
+            if order > 1:
+                cc2 = Counter(ngrams(phrase, order))
+                if counter_type == 'list_agg':
+                    cnt.from_counter(cc2, ii)
+                else:
+                    cnt += cc2
+            else:
+                cc2 = Counter((x[0] for x in ngrams(phrase, order)))
+                if counter_type == 'list_agg':
+                    cnt.from_counter(cc2, ii)
+                else:
+                    cnt += cc2
         ngrams_dict[order] += cnt
     return ngrams_dict
 
@@ -431,14 +466,22 @@ def split_corpus(corpus, chunk_size=200):
     return corpus_chunks
 
 
-def transform_counter(cnt, how='lemma', lmtzr=None):
+def transform_counter(cnt, how='lemma', lmtzr=None, counter_type='counter'):
+    if counter_type == 'list_agg':
+        cnt_class = ListAggregator
+    else:
+        cnt_class = Counter
+
     if how == 'lemma':
         if not lmtzr:
             lmtzr = WordNetLemmatizer()
-        cnt_new = Counter()
+        cnt_new = cnt_class()
         for item, cnt in cnt.items():
-            k = tuple([lmtzr.lemmatize(x) for x in item])
-            cnt_new += Counter({k: cnt})
+            if isinstance(item, str):
+                k = lmtzr.lemmatize(item)
+            else:
+                k = tuple([lmtzr.lemmatize(x) for x in item])
+            cnt_new += cnt_class({k: cnt})
         return cnt_new
     else:
         return cnt
