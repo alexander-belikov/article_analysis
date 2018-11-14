@@ -1,5 +1,6 @@
 import pandas as pd
-import gzip, pickle
+import gzip
+import pickle
 import warnings
 import argparse
 from os.path import expanduser, join, isfile
