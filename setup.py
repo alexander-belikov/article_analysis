@@ -28,7 +28,7 @@ setup(
         "License :: OSI Approved :: BSD License",
     ],
     install_requires=[
-        'numpy', 'pandas'
+        'numpy', 'pandas', 'nltk'
     ],
 )
 

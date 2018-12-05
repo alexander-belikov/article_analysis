@@ -1,6 +1,3 @@
-from _collections_abc import Mapping
-
-
 def _count_elements(mapping, iterable):
     mapping_get = mapping.get
     for elem in iterable:
@@ -24,10 +21,6 @@ class ListAggregator(dict):
         return []
 
     def __add__(self, other):
-        '''
-        Add counts from two.
-
-        '''
         if not isinstance(other, ListAggregator):
             return NotImplemented
         result = ListAggregator()
