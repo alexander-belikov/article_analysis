@@ -6,7 +6,7 @@ import article_analysis.parse as aap
 from article_analysis.ngram_tools import NgramAggregator
 
 
-def run(input_path, output_path, head=-1):
+def run(input_path, output_path, head=-1, verbose=False):
     suffix = 'pgz'
     prefix = 'ngrams_dict'
     indx = aap.get_indices(input_path, prefix, suffix)
@@ -17,8 +17,10 @@ def run(input_path, output_path, head=-1):
     for ii in indx:
         chunk = aap.get_chunk(input_path, prefix, ii)
         ngagg.update_with_ngram_dicts(chunk.values())
+        if verbose:
+            print('{0} batch processed'.format(ii))
 
-    ngram_dist = ngagg.yield_distribution()
+    ngram_dist = ngagg.yield_distribution(verbose=verbose)
 
     with gzip.open(join(output_path, 'corpus_ngram_dist.pgz'), 'wb') as fp:
         pickle.dump(ngram_dist, fp)
@@ -32,13 +34,17 @@ if __name__ == "__main__":
                         help='size of data batches')
 
     parser.add_argument('-s', '--sourcepath',
-                        default=expanduser('~/data/jstor/amj_raw/json_amj.txt'),
+                        default=expanduser('~/data/jstor/latest'),
                         help='path to data file')
 
     parser.add_argument('-d', '--destpath',
-                        default=expanduser('~/data/jstor/ngrams_new'),
+                        default=expanduser('~/data/jstor/latest'),
                         help='folder to write data to')
 
+    parser.add_argument('--verbosity',
+                        default=True, type=bool,
+                        help='True for verbose output')
+
     args = parser.parse_args()
-    run(args.sourcepath, args.destpath, args.head)
+    run(args.sourcepath, args.destpath, args.head, args.verbosity)
 

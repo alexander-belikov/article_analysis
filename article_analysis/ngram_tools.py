@@ -59,8 +59,11 @@ class NgramAggregator(object):
         for item in ngdicts:
             self.update_with_ngram_dict(item, counts_type)
 
-    def yield_distribution(self, alpha=0.05):
+    def yield_distribution(self, alpha=0.05, verbose=False):
         dist = dict()
-        for k, v in self.agg.items():
-            dist[k] = v.yield_distribution(alpha)
+        orders = sorted(self.agg.keys())
+        for k in orders:
+            dist[k] = self.agg[k].yield_distribution(alpha)
+            if verbose:
+                print('{0} order dist processed'.format(k))
         return dist
