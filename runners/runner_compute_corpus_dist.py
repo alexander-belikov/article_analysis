@@ -16,6 +16,8 @@ def run(input_path, output_path, head=-1, verbose=False):
     ngagg = NgramAggregator(list(range(1, 6)))
     for ii in indx:
         chunk = aap.get_chunk(input_path, prefix, ii)
+        if verbose:
+            print('Processing batch {0}...'.format(ii))
         ngagg.update_with_ngram_dicts(chunk.values())
         if verbose:
             print('{0} batch processed'.format(ii))

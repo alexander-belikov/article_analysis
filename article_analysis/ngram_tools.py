@@ -55,8 +55,10 @@ class NgramAggregator(object):
         else:
             raise ValueError('in update_with_ngram_dict : ngram orders of ndict are incompatible')
 
-    def update_with_ngram_dicts(self, ngdicts, counts_type='list'):
-        for item in ngdicts:
+    def update_with_ngram_dicts(self, ngdicts, counts_type='list', verbose=False):
+        for j, item in zip(range(len(ngdicts)), ngdicts):
+            if verbose:
+                print('Processing item {0}...'.format(j))
             self.update_with_ngram_dict(item, counts_type)
 
     def yield_distribution(self, alpha=0.05, verbose=False):
