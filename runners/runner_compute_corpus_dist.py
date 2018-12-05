@@ -18,7 +18,7 @@ def run(input_path, output_path, head=-1, verbose=False):
         chunk = aap.get_chunk(input_path, prefix, ii)
         if verbose:
             print('Processing batch {0}...'.format(ii))
-        ngagg.update_with_ngram_dicts(chunk.values())
+        ngagg.update_with_ngram_dicts(chunk.values(), verbose=verbose)
         if verbose:
             print('{0} batch processed'.format(ii))
 

@@ -58,7 +58,7 @@ class NgramAggregator(object):
     def update_with_ngram_dicts(self, ngdicts, counts_type='list', verbose=False):
         for j, item in zip(range(len(ngdicts)), ngdicts):
             if verbose:
-                print('Processing item {0}...'.format(j))
+                print('Processing item {0}/{1}...'.format(j, len(ngdicts)))
             self.update_with_ngram_dict(item, counts_type)
 
     def yield_distribution(self, alpha=0.05, verbose=False):
