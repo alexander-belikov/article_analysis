@@ -515,3 +515,24 @@ def get_chunk(fpath, prefix, index):
         item = pickle.load(fp)
         return item
     return None
+
+
+def get_articles(dois, registry_dict, fpath, prefix):
+    doi_chunk_map = find_doi_chunk_map(dois, registry_dict)
+    chunks_to_load = list(set(doi_chunk_map.values()))
+    chunks_dict = {ii: get_chunk(fpath, prefix, ii) for ii in chunks_to_load}
+    doi_ngram_dict = {doi:chunks_dict[doi_chunk_map[doi]][doi] for doi in dois}
+    return doi_ngram_dict
+
+
+def find_doi_chunk_map(dois, registry_dict):
+    return {k: [kk for kk, val in registry_dict.items() if k in val][0] for k in dois}
+
+
+def load_ngram_dist(fpath, order, thr=2):
+    fname = join(fpath, 'corpus_ngram_dist_n_{0}_thr_{1}.pgz'.format(order, thr))
+    with gzip.open(fname) as fp:
+        distr_dict = pickle.load(fp)
+    if order == 1:
+        distr_dict = {k[0]: v for k, v in distr_dict.items()}
+    return distr_dict
