@@ -8,14 +8,16 @@ from article_analysis.parse import get_chunk, get_articles, find_doi_chunk_map, 
 import article_analysis.parse_ent as aape
 
 
-head = 1000
+head = -1
 verbose = True
 keywords = ['hypothesis', 'hypotheses', 'table']
 batch_size = 50
 
+fp_gen = expanduser('~/data/jstor/latest/')
+fp_gen = '/home/valery/RE_Project/amj_ngrams/latest_listagg'
 
-input_path = expanduser('~/data/jstor/latest/')
-output_path = expanduser('~/data/jstor/latest/')
+input_path = fp_gen
+output_path = fp_gen
 prefix = 'ngrams_dict'
 
 nlp = aape.init_nlp()
@@ -23,7 +25,8 @@ nlp = aape.init_nlp()
 with open(join(output_path, 'registry_json.txt')) as file:
     registry_dict = json.loads(file.read())
 
-fname = expanduser('~/data/jstor/latest/corpus_clean_dict.pgz')
+fname = '{0}corpus_clean_dict.pgz'.format(fp_gen)
+
 with gzip.open(fname) as fp:
     articles_ds = pickle.load(fp)
 
