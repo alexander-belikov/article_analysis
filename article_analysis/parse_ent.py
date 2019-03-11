@@ -5,7 +5,7 @@ import networkx as nx
 def init_nlp():
     nlp = spacy.load('en')
     not_stop_words = ['top', 'bottom']
-    stop_words = ["'s", '-']
+    stop_words = ["'s", '-', '.', "'", '"']
 
     for w in not_stop_words:
         #     nlp.Defaults.stop_words.remove(w)
@@ -30,6 +30,7 @@ def get_np_candidates(iphrases, article, nlp, window=1):
     chunks = []
     inds = [range(i - window, i + window + 1) for i in iphrases]
     overlap_indices = sorted(list(set([x for sublist in inds for x in sublist])))
+    overlap_indices = [ii for ii in overlap_indices if ii < len(article)]
 
     for j in overlap_indices:
         phrase = ' '.join(article[j])
