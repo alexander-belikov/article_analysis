@@ -4,7 +4,7 @@ from os.path import join, expanduser
 import pandas as pd
 import json
 
-from article_analysis.parse import get_chunk, get_articles, find_doi_chunk_map, load_ngram_dist
+from article_analysis.parse import get_chunk, get_article_ngram_dict, find_doi_chunk_map, load_ngram_dist
 import article_analysis.parse_ent as aape
 
 

@@ -517,11 +517,11 @@ def get_chunk(fpath, prefix, index):
     return None
 
 
-def get_articles(dois, registry_dict, fpath, prefix):
+def get_article_ngram_dict(dois, registry_dict, fpath, prefix):
     doi_chunk_map = find_doi_chunk_map(dois, registry_dict)
     chunks_to_load = list(set(doi_chunk_map.values()))
     chunks_dict = {ii: get_chunk(fpath, prefix, ii) for ii in chunks_to_load}
-    doi_ngram_dict = {doi:chunks_dict[doi_chunk_map[doi]][doi] for doi in dois}
+    doi_ngram_dict = {doi: chunks_dict[doi_chunk_map[doi]][doi] for doi in dois}
     return doi_ngram_dict
 
 
