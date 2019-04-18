@@ -7,7 +7,7 @@ import article_analysis.parse_ent as aape
 from numpy import nan
 
 
-head = 50
+head = 15
 verbose = True
 keywords = ['hypothesis', 'hypotheses', 'table']
 batch_size = 5
