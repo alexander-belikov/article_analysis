@@ -408,6 +408,7 @@ def combine_keyword_table(carticle, keywords, nlp, thr_freq, thr_len):
 
 # leftover
 
+
 def get_vcs_from_keyword_ix_dict(list_key_ix_phrases_dict, identifiers, np_bag, phrase_grams_dict, verbose=False):
 
     powerset_ixs = powerset(list(range(len(list_key_ix_phrases_dict))))
