@@ -1,4 +1,4 @@
-import enchant
+# import enchant
 import numpy as np
 import re
 from nltk.corpus import stopwords
@@ -222,44 +222,44 @@ def eat_page_prefix_suffix(article, prefix=True, window=150, verbose=False):
 
 # 1) check page breaks (no hyphen there), (beg, end).
 
-def merge_page_breaks(article, window=150, verbose=False):
-    article_out = [article[0]]
-    d = enchant.Dict("en_US")
-
-    for p2 in article[1:]:
-        p1 = article_out.pop()
-        window1 = min([window, len(p1)])
-        window2 = min([window, len(p2)])
-        subphrase1, subphrase2 = p1[-window1:].split(), p2[:window2].split()
-        if subphrase1 and subphrase2:
-            ws1, ws2 = subphrase1[-1], subphrase2[0]
-            w0 = ws1+ws2
-            check_flag = d.check(w0)
-            if d.suggest(w0):
-                suggest_word = d.suggest(w0)[0]
-            else:
-                suggest_word = ''
-            if len(suggest_word) == len(w0) and sum([c1 != c2 for c1, c2 in zip(suggest_word, w0)]):
-                suggest_flag = True
-            else:
-                suggest_flag = False
-            if check_flag or suggest_flag:
-                if suggest_flag:
-                    p1_work = p1[:-len(ws1)] + suggest_word
-                else:
-                    p1_work = p1[:-len(ws1)] + w0
-                article_out.append(p1_work)
-                p2_work = p2[len(ws2):]
-                article_out.append(p2_work)
-            else:
-                article_out.append(p1)
-                article_out.append(p2)
-        else:
-            article_out.append(p1)
-            article_out.append(p2)
-
-    # article_out[-1] = article[-1]
-    return article_out
+# def merge_page_breaks(article, window=150, verbose=False):
+#     article_out = [article[0]]
+#     d = enchant.Dict("en_US")
+#
+#     for p2 in article[1:]:
+#         p1 = article_out.pop()
+#         window1 = min([window, len(p1)])
+#         window2 = min([window, len(p2)])
+#         subphrase1, subphrase2 = p1[-window1:].split(), p2[:window2].split()
+#         if subphrase1 and subphrase2:
+#             ws1, ws2 = subphrase1[-1], subphrase2[0]
+#             w0 = ws1+ws2
+#             check_flag = d.check(w0)
+#             if d.suggest(w0):
+#                 suggest_word = d.suggest(w0)[0]
+#             else:
+#                 suggest_word = ''
+#             if len(suggest_word) == len(w0) and sum([c1 != c2 for c1, c2 in zip(suggest_word, w0)]):
+#                 suggest_flag = True
+#             else:
+#                 suggest_flag = False
+#             if check_flag or suggest_flag:
+#                 if suggest_flag:
+#                     p1_work = p1[:-len(ws1)] + suggest_word
+#                 else:
+#                     p1_work = p1[:-len(ws1)] + w0
+#                 article_out.append(p1_work)
+#                 p2_work = p2[len(ws2):]
+#                 article_out.append(p2_work)
+#             else:
+#                 article_out.append(p1)
+#                 article_out.append(p2)
+#         else:
+#             article_out.append(p1)
+#             article_out.append(p2)
+#
+#     # article_out[-1] = article[-1]
+#     return article_out
 
 
 def check_page_breaks(article, window=150, nwords=3):
@@ -272,48 +272,48 @@ def check_page_breaks(article, window=150, nwords=3):
 # 2) check all "beg-" cases, if beg+end are in corpus
 
 
-def merge_hyphens(phrase, checker_dict=None):
-    print(phrase)
-    new_phrase = [phrase[0]]
-    if not checker_dict:
-        checker_dict = enchant.Dict("en_US")
-    if len(phrase) > 1:
-        for w2 in phrase[1:]:
-            w1 = new_phrase.pop()
-            print(w1, w2)
-            if w1[-1] == '-' and checker_dict.check(w1[:-1] + w2):
-                new_phrase.append(w1[:-1] + w2)
-            else:
-                new_phrase.append(w1)
-                new_phrase.append(w2)
-        return new_phrase
-    else:
-        return phrase
+# def merge_hyphens(phrase, checker_dict=None):
+#     print(phrase)
+#     new_phrase = [phrase[0]]
+#     if not checker_dict:
+#         checker_dict = enchant.Dict("en_US")
+#     if len(phrase) > 1:
+#         for w2 in phrase[1:]:
+#             w1 = new_phrase.pop()
+#             print(w1, w2)
+#             if w1[-1] == '-' and checker_dict.check(w1[:-1] + w2):
+#                 new_phrase.append(w1[:-1] + w2)
+#             else:
+#                 new_phrase.append(w1)
+#                 new_phrase.append(w2)
+#         return new_phrase
+#     else:
+#         return phrase
 
 
-def merge_hyphenated_words(super_phrase, checker_dict=None):
-    #TODO simpligy if else logic
-    if not checker_dict:
-        checker_dict = enchant.Dict("en_US")
-
-    super_phrase_hyphed = super_phrase[:1]
-    super_phrase_copy = list(super_phrase[1:])
-
-    while super_phrase_copy:
-        w1 = super_phrase_copy.pop(0)
-        if w1 == '-':
-            if super_phrase_copy:
-                w2 = super_phrase_copy.pop(0)
-                if checker_dict.check(super_phrase_hyphed[-1] + w2) and w2.isalpha():
-                    w0 = super_phrase_hyphed.pop()
-                    super_phrase_hyphed.append(w0 + w2)
-                else:
-                    super_phrase_hyphed.append(w1)
-            else:
-                super_phrase_hyphed.append(w1)
-        else:
-            super_phrase_hyphed.append(w1)
-    return super_phrase_hyphed
+# def merge_hyphenated_words(super_phrase, checker_dict=None):
+#     #TODO simpligy if else logic
+#     if not checker_dict:
+#         checker_dict = enchant.Dict("en_US")
+#
+#     super_phrase_hyphed = super_phrase[:1]
+#     super_phrase_copy = list(super_phrase[1:])
+#
+#     while super_phrase_copy:
+#         w1 = super_phrase_copy.pop(0)
+#         if w1 == '-':
+#             if super_phrase_copy:
+#                 w2 = super_phrase_copy.pop(0)
+#                 if checker_dict.check(super_phrase_hyphed[-1] + w2) and w2.isalpha():
+#                     w0 = super_phrase_hyphed.pop()
+#                     super_phrase_hyphed.append(w0 + w2)
+#                 else:
+#                     super_phrase_hyphed.append(w1)
+#             else:
+#                 super_phrase_hyphed.append(w1)
+#         else:
+#             super_phrase_hyphed.append(w1)
+#     return super_phrase_hyphed
 
 
 def split_into_phrases(tokens_list):

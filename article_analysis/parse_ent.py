@@ -5,6 +5,7 @@ import numpy as np
 from itertools import chain, combinations, product
 from functools import reduce
 from operator import and_
+from string import punctuation
 
 
 def init_nlp():
@@ -305,14 +306,64 @@ def get_high_level_stats(carticle, keywords, nlp):
 # functions for dealing with tables
 
 def find_tablelike_phrases(article, thr_freq=0.4, thr_len=10,
-                           thr_table_distance_normed=0.05, verbose=False):
+                           min_table_distance_normed=0.05,
+                           min_punct=15,
+                           min_digit=15,
+                           min_freq_punct_digit=0.3,
+                           verbose=False):
+    """
+    find a list of phrases from an article that look like they could be OCR-ed from a table(s)
+
+    the decision is heuristically based on:
+
+    :param article:
+    :param thr_freq:
+    :param thr_len:
+    :param min_table_distance_normed:
+    :param verbose:
+    :return:
+    """
+    stat = get_stats_table(article)
+    top10 = stat.shape[0] - 10
+    mask = (((stat['freq_digit'] > thr_freq) &
+             (stat['n'] > thr_len) &
+             (stat['table_distance_normed'] < min_table_distance_normed))
+            |
+            (
+                (stat['freq_punct_digit'] > min_freq_punct_digit) &
+                ((stat['punct'] > min_punct) | (stat['digit'] > min_digit)) &
+                (stat['rad_rank_plain'] > top10)
+            ))
+    if verbose:
+        print(sum(stat['table_flag']), sum(mask))
+    stat['tablelike'] = False
+    stat.loc[mask, 'tablelike'] = True
+    return stat
+
+
+def get_stats_table(article):
     stat = pd.DataFrame([(len([x for x in phrase if x.isdigit()]),
                           len(phrase),
+                          len([x for x in phrase if x in punctuation]),
                           'table' in phrase or 'Table' in phrase) for phrase in article],
-                        columns=['n_digitlike', 'n', 'table_flag'])
-    stat['freq'] = stat['n_digitlike'] / stat['n']
+                        columns=['digit', 'n', 'punct', 'table_flag'])
+    stat['freq_digit'] = stat['digit'] / stat['n']
+    stat['freq_punct'] = stat['punct'] / stat['n']
+
+    stat['logpunct'] = np.log(stat['punct'] + 1)
+    stat['logn'] = np.log(stat['n'])
+
+    stat['punct_digit'] = stat['punct'] + stat['digit']
+    stat['freq_punct_digit'] = stat['punct_digit'] / stat['n']
+
+    stat['log_punct_digit'] = np.log(stat['punct_digit'])
+
+    stat['rad'] = (stat['logn']**2 + stat['log_punct_digit']**2)
+    stat['rad_rank'] = stat['rad'].rank(pct=True)
+    stat['rad_rank_plain'] = stat['rad'].rank()
     #     distance to table : 0 for very far, 1 in the same phrase
     stat = stat.reset_index()
+    # print(stat)
     iis = list(stat.loc[stat['table_flag'], 'index'].index)
     article_length = len(article)
     if iis:
@@ -322,13 +373,7 @@ def find_tablelike_phrases(article, thr_freq=0.4, thr_len=10,
 
     stat['table_distance_normed'] = stat['table_distance'].apply(lambda x: x / article_length)
     stat['table_flag_ext'] = stat['table_flag'] | stat['table_flag'].shift()
-    mask = ((stat['freq'] > thr_freq) &
-            (stat['n'] > thr_len) &
-            (stat['table_distance_normed'] < thr_table_distance_normed))
-    if verbose:
-        print(sum(stat['table_flag']), sum(mask))
-    iis = stat.loc[mask, 'index'].values
-    return iis
+    return stat
 
 
 def parse_table_phrase(phrase):
